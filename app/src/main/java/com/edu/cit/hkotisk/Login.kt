@@ -104,7 +104,7 @@ class Login : AppCompatActivity() {
                     }
                     
                     // Navigate to Dashboard
-                    startActivity(Intent(this@Login, MainActivity::class.java).apply {
+                    startActivity(Intent(this@Login, Dashboard::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     })
                     finish()

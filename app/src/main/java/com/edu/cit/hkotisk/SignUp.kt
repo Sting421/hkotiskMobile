@@ -126,7 +126,8 @@ class SignUp : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                     
-                    // Return to login screen
+                    // Navigate to login screen
+                    startActivity(Intent(this@SignUp, Login::class.java))
                     finish()
                 } else {
                     Toast.makeText(
