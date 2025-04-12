@@ -28,9 +28,15 @@
         <activity android:name=".Login" />
         <activity android:name=".SignUp" />
         <activity android:name=".LandingPage" />
-        <activity android:name=".Dashboard" />
+        <activity 
+            android:name=".Dashboard"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTop" />
         <activity android:name=".OrdersActivity" />
-        <activity android:name=".CartActivity" />
+        <activity 
+            android:name=".CartActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTop" />
         <activity android:name=".ProfileActivity" />
 
     </application>

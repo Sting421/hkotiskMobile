@@ -1,11 +1,18 @@
 package com.edu.cit.hkotisk.data.api
 
-import com.edu.cit.hkotisk.data.model.Product
-import com.edu.cit.hkotisk.data.model.ProductResponse
+import com.edu.cit.hkotisk.data.model.*
 import retrofit2.Call
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 
 interface ProductService {
     @GET("user/product")
-     fun getProducts(): Call<ProductResponse>
+    fun getProducts(): Call<ProductResponse>
+
+    @POST("user/cart")
+    fun addToCart(@Body cartRequest: CartRequest): Call<CartResponse>
+
+    @GET("user/cart")
+    fun getCart(): Call<GetCartResponse>
 }

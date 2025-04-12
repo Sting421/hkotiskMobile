@@ -1,6 +1,7 @@
 package com.edu.cit.hkotisk.data.api
 
 import android.content.Context
+import android.util.Log
 import com.edu.cit.hkotisk.data.api.AuthService
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -9,7 +10,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.196.8:8080/"  // Android emulator localhost
+    private const val BASE_URL = "http://10.0.2.2:8080"  // Android emulator special alias for host's localhost
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -37,6 +38,13 @@ object RetrofitClient {
 
     private fun createAuthClientBuilder(): OkHttpClient.Builder {
         return OkHttpClient.Builder()
+            .followRedirects(true)  // Let OkHttp handle redirects automatically
+            .followSslRedirects(true)
+            .retryOnConnectionFailure(true)
+            .callTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .addInterceptor(loggingInterceptor)
     }
 
