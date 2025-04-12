@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.GridLayoutManager
 import com.edu.cit.hkotisk.data.api.RetrofitClient
 import com.edu.cit.hkotisk.data.model.Product
 import com.edu.cit.hkotisk.data.model.ProductResponse
@@ -15,12 +16,14 @@ import retrofit2.Response
 
 class Dashboard : AppCompatActivity() {
     private lateinit var binding: ActivityDashboardBinding
+    private lateinit var productAdapter: ProductAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupRecyclerView()
         fetchProducts()
 
         binding.bottomNavigation.selectedItemId = R.id.navigation_dashboard
@@ -44,9 +47,18 @@ class Dashboard : AppCompatActivity() {
         }
     }
 
+    private fun setupRecyclerView() {
+        productAdapter = ProductAdapter(emptyList())
+        binding.categoryContentRecycler.apply {
+            layoutManager = GridLayoutManager(this@Dashboard, 2)
+            adapter = productAdapter
+        }
+    }
+
     private fun fetchProducts() {
         RetrofitClient.createProductService(this).getProducts().enqueue(object : Callback<ProductResponse> {
             override fun onResponse(call: Call<ProductResponse>, response: Response<ProductResponse>) {
+                Log.d("Dashboard", "Raw Response: $response")
                 if (response.isSuccessful) {
                     val productResponse = response.body()
                     Log.d("Dashboard", "Raw Response: $productResponse")
@@ -55,9 +67,7 @@ class Dashboard : AppCompatActivity() {
                         val products = productResponse.oblist
                         if (products.isNotEmpty()) {
                             Log.d("Dashboard", "Products fetched successfully. Count: ${products.size}")
-                            // Handle the products - you can update the UI here
-                            Toast.makeText(this@Dashboard, "Fetched ${products.size} products", Toast.LENGTH_SHORT).show()
-                            // TODO: Update RecyclerView or other UI components with products
+                            productAdapter.updateProducts(products)
                         } else {
                             Log.d("Dashboard", "No products found in response")
                             Toast.makeText(this@Dashboard, "No products available", Toast.LENGTH_SHORT).show()
