@@ -19,4 +19,10 @@ interface ProductService {
 
     @POST("user/order")
     fun createOrder(): Call<OrderResponse>
+
+    @POST("user/cart/update")
+    fun updateCartQuantity(@Body cartRequest: CartRequest): Call<CartResponse>
+
+    @POST("user/cart/remove")
+    fun removeFromCart(@Body cartRequest: CartRequest): Call<CartResponse>
 }

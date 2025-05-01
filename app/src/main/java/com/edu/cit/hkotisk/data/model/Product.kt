@@ -4,11 +4,11 @@ data class Product(
     val productId: Int,
     val description: String,
     val productName: String,
-    val prices: List<Double>,
-    val quantity: List<Int>,
-    val sizes: List<String>,
+    val price: Double,
+    val quantity: Int,
     val category: String,
-    val productImage: String
+    val productImage: String,
+    val available: Boolean
 )
 
 data class ProductResponse(

@@ -24,9 +24,12 @@ class ProductAdapter(
         val productName: TextView = view.findViewById(R.id.productName)
         val productPrice: TextView = view.findViewById(R.id.productPrice)
         val productDescription: TextView = view.findViewById(R.id.productDescription)
-        val sizeSpinner: Spinner = view.findViewById(R.id.sizeSpinner)
-        val quantityInput: EditText = view.findViewById(R.id.quantityInput)
+        val decrementButton: Button = view.findViewById(R.id.decrementButton)
+        val quantityDisplay: TextView = view.findViewById(R.id.quantityDisplay)
+        val incrementButton: Button = view.findViewById(R.id.incrementButton)
         val addToCartButton: Button = view.findViewById(R.id.addToCartButton)
+        val loadingSpinner: ProgressBar = view.findViewById(R.id.loadingSpinner)
+        val availabilityStatus: TextView = view.findViewById(R.id.availabilityStatus)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
@@ -40,8 +43,12 @@ class ProductAdapter(
         val context = holder.itemView.context
         
         holder.productName.text = product.productName
-        holder.productPrice.text = "₱${product.prices.firstOrNull() ?: 0.0}"
+        holder.productPrice.text = "₱${product.price}"
         holder.productDescription.text = product.description
+
+        // Handle availability status
+        holder.availabilityStatus.visibility = if (!product.available) View.VISIBLE else View.GONE
+        holder.addToCartButton.isEnabled = product.available
         
         // Load image using Glide
         Glide.with(context)
@@ -49,41 +56,55 @@ class ProductAdapter(
             .centerCrop()
             .into(holder.productImage)
 
-        // Set up size spinner
-        val sizeAdapter = ArrayAdapter(
-            context,
-            android.R.layout.simple_spinner_item,
-            product.sizes
-        ).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
-        holder.sizeSpinner.adapter = sizeAdapter
+        // Set up quantity controls
+        var quantity = 1
+        holder.quantityDisplay.text = quantity.toString()
 
-        // Set default quantity and add validation
-        holder.quantityInput.setText("1")
-        holder.quantityInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                val input = holder.quantityInput.text.toString()
-                val quantity = input.toIntOrNull() ?: 0
-                if (quantity < 1) {
-                    holder.quantityInput.setText("1")
-                    Toast.makeText(context, "Quantity must be at least 1", Toast.LENGTH_SHORT).show()
-                }
+        holder.decrementButton.setOnClickListener {
+            if (quantity > 1) {
+                quantity--
+                holder.quantityDisplay.text = quantity.toString()
+            }
+        }
+
+        holder.incrementButton.setOnClickListener {
+            if (quantity < product.quantity) {
+                quantity++
+                holder.quantityDisplay.text = quantity.toString()
+            } else {
+                Toast.makeText(context, "Maximum available quantity reached", Toast.LENGTH_SHORT).show()
             }
         }
 
         // Add to cart button click handler with loading state
         holder.addToCartButton.setOnClickListener { button ->
-            button.isEnabled = false
-            val selectedSize = holder.sizeSpinner.selectedItem as String
-            val quantity = holder.quantityInput.text.toString().toIntOrNull() ?: 1
-            val price = product.prices.firstOrNull()?.toDouble()?.toInt() ?: 0
+            button.visibility = View.INVISIBLE
+            holder.loadingSpinner.visibility = View.VISIBLE
+
+            if (!product.available) {
+                button.visibility = View.VISIBLE
+                holder.loadingSpinner.visibility = View.GONE
+                Toast.makeText(context, "Product is not available", Toast.LENGTH_SHORT).show()
+                button.visibility = View.VISIBLE
+                holder.loadingSpinner.visibility = View.GONE
+                return@setOnClickListener
+            }
+            
+            val quantity = holder.quantityDisplay.text.toString().toIntOrNull() ?: 1
+            
+            if (quantity > product.quantity) {
+                Toast.makeText(context, "Not enough stock available", Toast.LENGTH_SHORT).show()
+                button.visibility = View.VISIBLE
+                holder.loadingSpinner.visibility = View.GONE
+                return@setOnClickListener
+            }
+            
+            val price = product.price
 
             val cartRequest = CartRequest(
                 productId = product.productId,
                 quantity = quantity,
-                price = price,
-                size = selectedSize
+                price = price
             )
 
             RetrofitClient.createProductService(context)
@@ -95,7 +116,8 @@ class ProductAdapter(
                     )
 
                     {
-                        button.isEnabled = true
+                        button.visibility = View.VISIBLE
+                        holder.loadingSpinner.visibility = View.GONE
                         Log.d("ProductAdapter", "Response code: ${response.code()}")
                         Log.d("ProductAdapter", "Raw response: ${response.raw()}")
                         
@@ -104,10 +126,9 @@ class ProductAdapter(
                         
                         when (code) {
                             200, 201 -> {
-                                val cartResponse = response.body()
+
                                 Toast.makeText(
-                                    context,
-                                    cartResponse?.message ?: "Added to cart successfully",
+                                    context, "Added to cart successfully",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -149,7 +170,8 @@ class ProductAdapter(
                     }
 
                     override fun onFailure(call: Call<CartResponse>, t: Throwable) {
-                        button.isEnabled = true
+                        button.visibility = View.VISIBLE
+                        holder.loadingSpinner.visibility = View.GONE
                         Log.e("ProductAdapter", "Network error", t)
                         val errorMessage = when {
                             t.message?.contains("ProtocolException") == true -> "Server error: Too many redirects"

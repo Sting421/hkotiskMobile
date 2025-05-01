@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">HKotisk</string>
     <string name="app_logo">HKotisk Logo</string>
+    <string name="login_with_microsoft">Login with Microsoft</string>
     
     <!-- Canteen List -->
     <string-array name="canteen_list">

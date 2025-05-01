@@ -11,5 +11,9 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="maroon">#800000</color>
+    <color name="backgroundMaroon">#883C40</color>
     <color name="gray">#808080</color>
+    <color name="gold">#F2C300</color>
+    <color name="BackgroundGold">#CDFFF7D2</color>
+    <color name="text_secondary">@color/gray</color>
 </resources>
