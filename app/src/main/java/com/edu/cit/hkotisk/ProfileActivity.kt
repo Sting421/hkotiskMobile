@@ -1,6 +1,7 @@
 package com.edu.cit.hkotisk
 
 import android.app.Dialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.Button
@@ -16,7 +17,12 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 
 class ProfileActivity : AppCompatActivity() {
+    companion object {
+        fun createIntent(context: android.content.Context) = android.content.Intent(context, ProfileActivity::class.java)
+    }
+
     private lateinit var authService: AuthService
+    private lateinit var loadingSpinner: android.widget.ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +38,7 @@ class ProfileActivity : AppCompatActivity() {
         val emailTextView = findViewById<TextView>(R.id.email_value)
         val editProfileButton = findViewById<Button>(R.id.edit_profile_button)
         val logoutButton = findViewById<Button>(R.id.logout_button)
+        loadingSpinner = findViewById(R.id.loadingSpinner)
 
         // Load user profile
         loadUserProfile(nameTextView, emailTextView)
@@ -41,23 +48,29 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         logoutButton.setOnClickListener {
-            // TODO: Clear stored token
-            finish()
+            // Clear stored token from SharedPreferences
+            val sharedPrefs = getSharedPreferences("secure_prefs", MODE_PRIVATE)
+            sharedPrefs.edit().remove("auth_token").apply()
+            
+            // Navigate to LandingPage
+            startActivity(Intent(this, LandingPage::class.java))
+            finishAffinity() // Close all activities in the stack
         }
         
         navView.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.navigation_dashboard -> {
+                    startActivity(Dashboard.createIntent(this))
                     finish()
                     true
                 }
                 R.id.navigation_orders -> {
-                    startActivity(android.content.Intent(this, OrdersActivity::class.java))
+                    startActivity(OrdersActivity.createIntent(this))
                     finish()
                     true
                 }
                 R.id.navigation_cart -> {
-                    startActivity(android.content.Intent(this, CartActivity::class.java))
+                    startActivity(CartActivity.createIntent(this))
                     finish()
                     true
                 }
@@ -68,6 +81,7 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun loadUserProfile(nameTextView: TextView, emailTextView: TextView) {
         lifecycleScope.launch {
+            loadingSpinner.visibility = android.view.View.VISIBLE
             try {
                 val response = authService.getUserProfile()
                 if (response.isSuccessful) {
@@ -80,6 +94,8 @@ class ProfileActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                loadingSpinner.visibility = android.view.View.GONE
             }
         }
     }
@@ -151,6 +167,7 @@ class ProfileActivity : AppCompatActivity() {
         dialog: Dialog
     ) {
         lifecycleScope.launch {
+            loadingSpinner.visibility = android.view.View.VISIBLE
             try {
                 if (username.isBlank()) {
                     Toast.makeText(this@ProfileActivity, "Username cannot be empty", Toast.LENGTH_SHORT).show()
@@ -188,6 +205,8 @@ class ProfileActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                loadingSpinner.visibility = android.view.View.GONE
             }
         }
     }

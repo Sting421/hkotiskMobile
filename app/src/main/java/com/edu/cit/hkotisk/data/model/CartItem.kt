@@ -1,5 +1,7 @@
 package com.edu.cit.hkotisk.data.model
 
+import android.media.Image
+
 data class CartItem(
     val cartId: Int,
     val orderId: Int,
@@ -11,6 +13,7 @@ data class CartItem(
     val productName: String,
     val productCategory: String,
     val productSize: String,
+    val productImage: String,
     val ordered: Boolean
 )
 

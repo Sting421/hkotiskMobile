@@ -49,9 +49,11 @@ class CartAdapter(
         holder.productPrice.text = "₱${cartItem.price}"
         holder.quantity.text = cartItem.quantity.toString()
         
-        // Load image using Glide
+        // Load image using Glide with placeholders
         Glide.with(context)
-            .load("https://it342-hkotisk.onrender.com/productImages/${cartItem.productId}.png")
+            .load(cartItem.productImage)
+            .placeholder(R.drawable.placeholder_image)
+            .error(R.drawable.error_image)
             .centerCrop()
             .into(holder.productImage)
 

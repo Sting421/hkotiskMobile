@@ -17,10 +17,15 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
+    companion object {
+        fun createIntent(context: Context) = android.content.Intent(context, CartActivity::class.java)
+    }
+
     private lateinit var checkoutButton: Button
     private lateinit var cartAdapter: CartAdapter
     private lateinit var cartRecyclerView: RecyclerView
     private lateinit var totalAmountTextView: TextView
+    private lateinit var loadingSpinner: android.widget.ProgressBar
     private var currentCall: Call<GetCartResponse>? = null
     private var isActivityActive = true
 
@@ -39,16 +44,17 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
         navView.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.navigation_dashboard -> {
+                    startActivity(Dashboard.createIntent(this))
                     finish()
                     true
                 }
                 R.id.navigation_orders -> {
-                    startActivity(android.content.Intent(this, OrdersActivity::class.java))
+                    startActivity(OrdersActivity.createIntent(this))
                     finish()
                     true
                 }
                 R.id.navigation_profile -> {
-                    startActivity(android.content.Intent(this, ProfileActivity::class.java))
+                    startActivity(ProfileActivity.createIntent(this))
                     finish()
                     true
                 }
@@ -60,6 +66,7 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
     private fun setupRecyclerView() {
         cartRecyclerView = findViewById(R.id.cart_recycler)
         totalAmountTextView = findViewById(R.id.total_amount_value)
+        loadingSpinner = findViewById(R.id.loadingSpinner)
         cartAdapter = CartAdapter(emptyList())
         cartAdapter.setCartItemListener(this)
         cartRecyclerView.apply {
@@ -95,6 +102,7 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
                 return@let
             }
 
+            loadingSpinner.visibility = android.view.View.VISIBLE
             val cartRequest = CartRequest(productId = productId, quantity = newQuantity, price = item.price)
             Log.d("CartActivity", "Updating cart with request: $cartRequest")
 
@@ -135,6 +143,7 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
         val service = RetrofitClient.createProductService(applicationContext)
         val currentItem = getCurrentCartItem(productId)
         currentItem?.let { item ->
+            loadingSpinner.visibility = android.view.View.VISIBLE
             val cartRequest = CartRequest(productId = productId, quantity = 0, price = item.price)
             Log.d("CartActivity", "Removing item from cart: $cartRequest")
 
@@ -182,28 +191,29 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
 
     private fun setupCheckoutButton() {
         checkoutButton = findViewById(R.id.checkout_button)
-        checkoutButton.setOnClickListener {
-            val cartItems = cartAdapter.getCurrentItems()
-            if (cartItems.isEmpty()) {
-                Toast.makeText(this, "Your cart is empty", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            checkoutButton.setOnClickListener {
+                val cartItems = cartAdapter.getCurrentItems()
+                if (cartItems.isEmpty()) {
+                    Toast.makeText(this, "Cart is empty", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
 
-            checkoutButton.isEnabled = false
-            Log.d("CartActivity", "Starting checkout process")
+                checkoutButton.isEnabled = false
+                loadingSpinner.visibility = android.view.View.VISIBLE
+                Log.d("CartActivity", "Starting checkout process")
             
             RetrofitClient.createProductService(applicationContext).createOrder()
-                .enqueue(object : Callback<OrderResponse> {
-                    override fun onResponse(call: Call<OrderResponse>, response: Response<OrderResponse>) {
+                .enqueue(object : Callback<List<OrderResponse>> {
+                    override fun onResponse(call: Call<List<OrderResponse>>, response: Response<List<OrderResponse>>) {
                         if (response.isSuccessful) {
-                            response.body()?.let { orderResponse ->
-                                Log.d("CartActivity", "Order created successfully")
-                                Toast.makeText(this@CartActivity, "Order placed successfully!", Toast.LENGTH_SHORT).show()
-                                // Navigate to Orders screen
-                                startActivity(android.content.Intent(this@CartActivity, OrdersActivity::class.java))
-                                finish()
-                            }
+                            Log.d("CartActivity", "Order created successfully")
+                            Toast.makeText(this@CartActivity, "Order placed successfully!", Toast.LENGTH_SHORT).show()
+                            // Navigate to Orders screen
+                            loadingSpinner.visibility = android.view.View.GONE
+                            startActivity(OrdersActivity.createIntent(this@CartActivity))
+                            finish()
                         } else {
+                            loadingSpinner.visibility = android.view.View.GONE
                             val errorBody = response.errorBody()?.string()
                             Log.e("CartActivity", "Failed to place order: $errorBody")
                             Toast.makeText(this@CartActivity, 
@@ -213,7 +223,8 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
                         }
                     }
 
-                    override fun onFailure(call: Call<OrderResponse>, t: Throwable) {
+                    override fun onFailure(call: Call<List<OrderResponse>>, t: Throwable) {
+                        loadingSpinner.visibility = android.view.View.GONE
                         Log.e("CartActivity", "Order creation error", t)
                         Toast.makeText(this@CartActivity, 
                             "Network error: Please check your connection", 
@@ -227,6 +238,9 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
     private fun loadCartItems() {
         if (!isActivityActive) return
 
+        // Show loading spinner
+        loadingSpinner.visibility = android.view.View.VISIBLE
+
         // Cancel any existing call
         currentCall?.cancel()
 
@@ -234,6 +248,7 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
         currentCall = RetrofitClient.createProductService(applicationContext).getCart()
         currentCall?.enqueue(object : Callback<GetCartResponse> {
             override fun onResponse(call: Call<GetCartResponse>, response: Response<GetCartResponse>) {
+                loadingSpinner.visibility = android.view.View.GONE
                 Log.d("CartActivity", "Raw Response: $response")
                 if (response.isSuccessful) {
                     response.body()?.oblist?.let { items ->
@@ -248,6 +263,7 @@ class CartActivity : AppCompatActivity(), CartAdapter.CartItemListener {
             }
 
             override fun onFailure(call: Call<GetCartResponse>, t: Throwable) {
+                loadingSpinner.visibility = android.view.View.GONE
                 if (isActivityActive) {
                     Toast.makeText(this@CartActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }

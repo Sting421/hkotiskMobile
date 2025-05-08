@@ -15,10 +15,15 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class Dashboard : AppCompatActivity() {
+    companion object {
+        fun createIntent(context: android.content.Context) = android.content.Intent(context, Dashboard::class.java)
+    }
+
     private lateinit var binding: ActivityDashboardBinding
     private lateinit var productAdapter: ProductAdapter
     private var isActivityActive = true
     private var currentCall: Call<ProductResponse>? = null
+    private var allProducts: List<Product> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +32,7 @@ class Dashboard : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             setupRecyclerView()
+            setupSearchView()
             fetchProducts()
         }
 
@@ -35,15 +41,18 @@ class Dashboard : AppCompatActivity() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.navigation_orders -> {
-                    startActivity(android.content.Intent(this, OrdersActivity::class.java))
+                    startActivity(OrdersActivity.createIntent(this))
+                    finish()
                     true
                 }
                 R.id.navigation_cart -> {
-                    startActivity(android.content.Intent(this, CartActivity::class.java))
+                    startActivity(CartActivity.createIntent(this))
+                    finish()
                     true
                 }
                 R.id.navigation_profile -> {
-                    startActivity(android.content.Intent(this, ProfileActivity::class.java))
+                    startActivity(ProfileActivity.createIntent(this))
+                    finish()
                     true
                 }
                 else -> false
@@ -57,6 +66,37 @@ class Dashboard : AppCompatActivity() {
             layoutManager = GridLayoutManager(this@Dashboard, 2)
             adapter = productAdapter
         }
+    }
+
+    private fun setupSearchView() {
+        binding.searchBar.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                filterProducts(query)
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                filterProducts(newText)
+                return true
+            }
+        })
+    }
+
+    private fun filterProducts(query: String?) {
+        if (query.isNullOrBlank()) {
+            productAdapter = ProductAdapter(allProducts)
+            binding.categoryContentRecycler.adapter = productAdapter
+            return
+        }
+
+        val filteredList = allProducts.filter { product ->
+            product.productName.contains(query, ignoreCase = true) ||
+            product.description.contains(query, ignoreCase = true) ||
+            product.category.contains(query, ignoreCase = true)
+        }
+        
+        productAdapter = ProductAdapter(filteredList)
+        binding.categoryContentRecycler.adapter = productAdapter
     }
 
     override fun onResume() {
@@ -85,6 +125,9 @@ class Dashboard : AppCompatActivity() {
     private fun fetchProducts() {
         if (!isActivityActive) return
         
+        // Show loading spinner
+        binding.loadingSpinner.visibility = android.view.View.VISIBLE
+        
         // Cancel any existing call
         currentCall?.cancel()
         
@@ -92,6 +135,8 @@ class Dashboard : AppCompatActivity() {
         currentCall = RetrofitClient.createProductService(applicationContext).getProducts()
         currentCall?.enqueue(object : Callback<ProductResponse> {
             override fun onResponse(call: Call<ProductResponse>, response: Response<ProductResponse>) {
+                // Hide loading spinner
+                binding.loadingSpinner.visibility = android.view.View.GONE
                 Log.d("Dashboard", "Raw Response: $response")
                 if (response.isSuccessful) {
                     val productResponse = response.body()
@@ -108,6 +153,7 @@ class Dashboard : AppCompatActivity() {
                         }
                         if (products.isNotEmpty()) {
                             Log.d("Dashboard", "Products fetched successfully. Count: ${products.size}")
+                            allProducts = products
                             productAdapter = ProductAdapter(products)
                             binding.categoryContentRecycler.adapter = productAdapter
                         } else {
@@ -132,6 +178,8 @@ class Dashboard : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<ProductResponse>, t: Throwable) {
+                // Hide loading spinner
+                binding.loadingSpinner.visibility = android.view.View.GONE
                 Log.e("Dashboard", "Network error", t)
                 if (isActivityActive) {
                     Toast.makeText(this@Dashboard, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()

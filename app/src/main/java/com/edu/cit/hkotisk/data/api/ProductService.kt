@@ -18,7 +18,10 @@ interface ProductService {
     fun getCart(): Call<GetCartResponse>
 
     @POST("user/order")
-    fun createOrder(): Call<OrderResponse>
+    fun createOrder(): Call<List<OrderResponse>>
+
+    @GET("user/orders")
+    fun getOrders(): Call<List<OrderResponse>>
 
     @POST("user/cart/update")
     fun updateCartQuantity(@Body cartRequest: CartRequest): Call<CartResponse>
